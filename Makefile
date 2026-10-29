@@ -1,5 +1,5 @@
 CXX = clang++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2
+CXXFLAGS = -std=c++17
 TARGET = image_pipeline
 
 SRCS = main.cpp function.cpp
