@@ -15,16 +15,6 @@ uint8_t* extract_luminance(const Image* input) {
     return luma;
 }
 
-// Allocates ANOTHER new buffer rather than modifying in-place; ownership passes to caller
-uint8_t* boost_brightness(const uint8_t* buffer, int count, int delta) {
-    uint8_t* result = new uint8_t[count];
-    for (int i = 0; i < count; ++i) {
-        int val = buffer[i] + delta;
-        result[i] = static_cast<uint8_t>(std::min(255, val));
-    }
-    return result;
-}
-
 // Allocates yet another buffer for the blurred output
 uint8_t* apply_horizontal_blur(const uint8_t* buffer, int width, int height) {
     int count = width * height;
@@ -64,21 +54,15 @@ Image* process_image(const Image* input) {
         return nullptr;
     }
 
-    int pixel_count = input->width * input->height;
-
     // Stage 1: Allocate & extract grayscale
     uint8_t* raw_luma = extract_luminance(input);
 
-    // Stage 2: Allocate & boost brightness (old buffer remains alive)
-    uint8_t* bright = boost_brightness(raw_luma, pixel_count, 30);
-
-    // Stage 3: Allocate & blur
-    uint8_t* blurred = apply_horizontal_blur(bright, input->width, input->height);
+    // Stage 2: Allocate & blur
+    uint8_t* blurred = apply_horizontal_blur(raw_luma, input->width, input->height);
 
     // Manual intermediate cleanup
     delete[] raw_luma;
-    delete[] bright;
 
-    // Stage 4: Package into image object and return to caller
+    // Stage 3: Package into image object and return to caller
     return make_image(blurred, input->width, input->height, 1);
 }
