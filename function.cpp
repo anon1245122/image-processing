@@ -1,10 +1,11 @@
 #include "function.h"
 #include <algorithm>
+#include <memory>
 
-// Allocates a brand new buffer; caller must track ownership
-uint8_t* extract_luminance(const Image* input) {
+// Pipeline stage helpers refactored to return managed std::unique_ptr buffers
+std::unique_ptr<uint8_t[]> extract_luminance(const Image* input) {
     int count = input->width * input->height;
-    uint8_t* luma = new uint8_t[count];
+    auto luma = std::make_unique<uint8_t[]>(count);
 
     for (int i = 0; i < count; ++i) {
         int r = input->data[i * 3 + 0];
@@ -15,10 +16,9 @@ uint8_t* extract_luminance(const Image* input) {
     return luma;
 }
 
-// Allocates yet another buffer for the blurred output
-uint8_t* apply_horizontal_blur(const uint8_t* buffer, int width, int height) {
+std::unique_ptr<uint8_t[]> apply_horizontal_blur(const uint8_t* buffer, int width, int height) {
     int count = width * height;
-    uint8_t* blurred = new uint8_t[count];
+    auto blurred = std::make_unique<uint8_t[]>(count);
 
     for (int y = 0; y < height; ++y) {
         int row_offset = y * width;
@@ -38,31 +38,30 @@ uint8_t* apply_horizontal_blur(const uint8_t* buffer, int width, int height) {
     return blurred;
 }
 
-// Wraps a raw buffer inside a newly allocated struct; neither struct nor buffer is freed automatically
 Image* make_image(uint8_t* buffer, int width, int height, int channels) {
-    Image* img = new Image();
+    auto img = std::make_unique<Image>();
     img->width = width;
     img->height = height;
     img->channels = channels;
     img->data = buffer;
-    return img;
+    return img.release();
 }
 
-// Pipeline coordinator
+// Pipeline coordinator refactored to RAII
 Image* process_image(const Image* input) {
     if (!input || !input->data || input->width <= 0 || input->height <= 0 || input->channels != 3) {
         return nullptr;
     }
 
-    // Stage 1: Allocate & extract grayscale
-    uint8_t* raw_luma = extract_luminance(input);
+    // Stage 1: Allocate & extract grayscale via unique_ptr
+    auto raw_luma = extract_luminance(input);
 
-    // Stage 2: Allocate & blur
-    uint8_t* blurred = apply_horizontal_blur(raw_luma, input->width, input->height);
+    // Stage 2: Allocate & blur via unique_ptr
+    auto blurred = apply_horizontal_blur(raw_luma.get(), input->width, input->height);
 
-    // Manual intermediate cleanup
-    delete[] raw_luma;
+    // RAII handles destruction of raw_luma automatically!
+    // No manual delete[] needed.
 
-    // Stage 3: Package into image object and return to caller
-    return make_image(blurred, input->width, input->height, 1);
+    // Stage 3: Package into image object and transfer buffer ownership to Image container
+    return make_image(blurred.release(), input->width, input->height, 1);
 }
