@@ -12,7 +12,7 @@ struct Image {
 // Pipeline stage helpers refactored to RAII
 std::unique_ptr<uint8_t[]> extract_luminance(const Image* input);
 std::unique_ptr<uint8_t[]> apply_horizontal_blur(const uint8_t* buffer, int width, int height);
-Image* make_image(uint8_t* buffer, int width, int height, int channels);
+Image* make_image(std::unique_ptr<uint8_t[]> buffer, int width, int height, int channels);
 
 // Primary pipeline entrypoint
 Image* process_image(const Image* input);

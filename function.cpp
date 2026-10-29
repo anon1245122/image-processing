@@ -38,12 +38,12 @@ std::unique_ptr<uint8_t[]> apply_horizontal_blur(const uint8_t* buffer, int widt
     return blurred;
 }
 
-Image* make_image(uint8_t* buffer, int width, int height, int channels) {
+Image* make_image(std::unique_ptr<uint8_t[]> buffer, int width, int height, int channels) {
     auto img = std::make_unique<Image>();
     img->width = width;
     img->height = height;
     img->channels = channels;
-    img->data = buffer;
+    img->data = buffer.get();
     return img.release();
 }
 
@@ -63,5 +63,5 @@ Image* process_image(const Image* input) {
     // No manual delete[] needed.
 
     // Stage 3: Package into image object and transfer buffer ownership to Image container
-    return make_image(blurred.release(), input->width, input->height, 1);
+    return make_image(std::move(blurred), input->width, input->height, 1);
 }
